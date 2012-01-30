@@ -1,0 +1,3 @@
+2005-07-04  Kanru Chen  <kanru.96@stu.csie.ncnu.edu.tw>
+	Initial release of chewing hash editor.
+	+ basic add, remove, edit method.
