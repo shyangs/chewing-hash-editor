@@ -2,6 +2,7 @@
 #include <iconv.h>
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "che.h"
 #include "key2pho8.h"
 #include "key2pho-utf8.h"
@@ -130,6 +131,10 @@ che_create_tree( GtkWindow *parient )
   return tree;
 }
 
+/* gtk radio menu items to choose the file format */
+static GtkWidget *format_menu_text;
+static GtkWidget *format_menu_binary;
+
 GtkWidget *
 che_create_menu( GtkWindow *parient )
 {
@@ -144,7 +149,11 @@ che_create_menu( GtkWindow *parient )
   GtkWidget *edit_menu;
   GtkWidget *edit_menu_newtsi;
   GtkWidget *edit_menu_remove;
+  GtkWidget *edit_menu_format;
+  GtkWidget *format_menu;
+  GSList    *format_group = 0;
   GtkWidget *separate;
+  GtkWidget *separate2;
 	
   file_menu = gtk_menu_new();
   file_menu_open = gtk_image_menu_item_new_from_stock (GTK_STOCK_OPEN, NULL);
@@ -172,6 +181,19 @@ che_create_menu( GtkWindow *parient )
   edit_menu_remove = gtk_menu_item_new_with_mnemonic ("_Remove");
   g_signal_connect (G_OBJECT (edit_menu_remove), "activate", G_CALLBACK (che_remove_phrase), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_remove);
+  separate2 = gtk_separator_menu_item_new();
+  gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), separate2);
+  edit_menu_format = gtk_menu_item_new_with_mnemonic ("_Format");
+  gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_format);
+
+  format_menu = gtk_menu_new();
+  format_menu_text = gtk_radio_menu_item_new_with_mnemonic(format_group, "_Text");
+  format_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (format_menu_text));
+  gtk_menu_shell_append (GTK_MENU_SHELL (format_menu), format_menu_text);
+  format_menu_binary = gtk_radio_menu_item_new_with_mnemonic(format_group, "_Binary");
+  format_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (format_menu_binary));
+  gtk_menu_shell_append (GTK_MENU_SHELL (format_menu), format_menu_binary);
+  gtk_menu_item_set_submenu(GTK_MENU_ITEM (edit_menu_format), format_menu);
 
   menu_bar = gtk_menu_bar_new ();
   menu_bar_file = gtk_menu_item_new_with_mnemonic ("_File");
@@ -181,8 +203,36 @@ che_create_menu( GtkWindow *parient )
 
   gtk_menu_bar_append (GTK_MENU_BAR (menu_bar), menu_bar_file);
   gtk_menu_bar_append (GTK_MENU_BAR (menu_bar), menu_bar_edit);
-  
+
   return menu_bar;
+}
+
+enum { HF_TEXT, HF_BINARY };
+
+void
+che_set_hash_format(int fmt)
+{
+	switch (fmt) {
+	case HF_TEXT:
+		gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (format_menu_text), TRUE);
+		break;
+	case HF_BINARY:
+		gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (format_menu_binary), TRUE);
+		break;
+	default:
+		assert(!"Incorrect hash format");
+	}
+}
+
+int
+che_get_hash_format()
+{
+	if (gtk_check_menu_item_get_active (GTK_CHECK_MENU_ITEM (format_menu_text)))
+		return HF_TEXT;
+	else if (gtk_check_menu_item_get_active (GTK_CHECK_MENU_ITEM (format_menu_binary)))
+		return HF_BINARY;
+	else
+		assert(!"Either text or binary should be selected.");
 }
 
 void
@@ -279,16 +329,17 @@ che_read_hash_bin(gchar *filename)
       memset(ubuffer, 0, rs);
       memset(zuin, '\0', sizeof(zuin));
 
+		/* frequency info */
 		userfreq = *(uint32_t*)(recbuf + 0);
 		time = *(uint32_t*)(recbuf + 4);
 		maxfreq = *(uint32_t*)(recbuf + 8);
 		origfreq = *(uint32_t*)(recbuf + 12);
 
+		/* string length in number of chinese characters */
 		len = (int)recbuf[16];
 
-		pshort = (uint16_t*)(recbuf + 17);
-
       /* read phoneSeq */
+		pshort = (uint16_t*)(recbuf + 17);
       for ( i = 0; i < len; i++ )
 		{
 		  memset(buffer2, '\0', ls);
@@ -299,14 +350,16 @@ che_read_hash_bin(gchar *filename)
 		  strcat( zuin, " " );
 		}
 
+		/* phrase length in number of bytes */
 		puchar = (unsigned char*)pshort;
 		memcpy(ubuffer, puchar+1, (int)*puchar);
 		ubuffer[(int)*puchar] = 0;
 
+		/* skip invalid utf8 strings */
 		if (!chewing_utf8_is_valid_str(ubuffer))
-			continue; /* skip invalid utf8 strings */
+			continue;
 
-		printf("str: %s, zhuin: %s\n", ubuffer, zuin);
+		//printf("str: %s, zhuin: %s\n", ubuffer, zuin);
 
 		/* store item */
 	   gtk_tree_store_append (store, &iter, NULL);
@@ -329,13 +382,13 @@ che_read_hash(gchar *filename)
 	/* check if the file is a binary hash */
 	FILE *f = fopen(filename, "rb");
 	if (f) {
-		char head[sizeof(BIN_HASH_SIG)];
+		char head[strlen(BIN_HASH_SIG)];
 		fread(head, sizeof(head), 1, f);
 		fclose(f);
 		if (memcmp(head, BIN_HASH_SIG, strlen(BIN_HASH_SIG)) == 0) /* binary hash */
-			che_read_hash_bin(filename);
+			che_read_hash_bin(filename), che_set_hash_format(HF_BINARY);
 		else /* fallback to text hash */
-			che_read_hash_txt(filename);
+			che_read_hash_txt(filename), che_set_hash_format(HF_TEXT);
 	}
 }
 
@@ -388,7 +441,7 @@ file_save_as( GtkWindow *parient )
 }
 
 void
-file_save( gchar *fname )
+file_save_txt( gchar *fname )
 {
   gchar *zuin;
   gchar *buffer, buf[125], str[125], bbuf[125];
@@ -427,6 +480,90 @@ file_save( gchar *fname )
     g_free(zuin);
   } while( gtk_tree_model_iter_next( GTK_TREE_MODEL(store), &iter ) );
   fclose(file);
+}
+
+void
+file_save_bin( gchar *fname )
+{
+  gchar *zuin;
+  gchar *buffer, buf[125], str[125], bbuf[125];
+  gchar *pos;
+  uint32_t userfreq, time, maxfreq, origfreq;
+  uint8_t phrase_length; /* zuin string length in chinese characters */
+  uint8_t string_length; /* string length in bytes */
+  uint16_t *pshort;
+  uint8_t *pchar;
+  FILE *file;
+  uint32_t chewing_lifetime = 0;
+  int i;
+
+  if ( fname == NULL )
+    file = fopen( filename, "wb" );
+  else
+    file = fopen( fname, "wb" );
+
+  /* write header: signature + chewing lifetime */
+  fwrite(BIN_HASH_SIG, strlen(BIN_HASH_SIG), 1, file);
+  fwrite(&chewing_lifetime, sizeof(uint32_t), 1, file); /* TODO: the value of chewing_lifetime */
+
+  gtk_tree_model_get_iter_first( GTK_TREE_MODEL(store), &iter);
+  do {
+    char writebuf[FIELD_SIZE] = {};
+    gtk_tree_model_get (GTK_TREE_MODEL(store), &iter,
+			SEQ_COLUMN, &buffer,
+			ZUIN_COLUMN, &zuin,
+			USERFREQ_COLUMN, &userfreq,
+			TIME_COLUMN, &time,
+			MAXFREQ_COLUMN, &maxfreq,
+			ORIGFREQ_COLUMN, &origfreq,
+			-1);
+
+    /* frequency info */
+	 *(uint32_t*)(writebuf + 0)  = userfreq;
+    *(uint32_t*)(writebuf + 4)  = time;
+	 *(uint32_t*)(writebuf + 8)  = maxfreq;
+	 *(uint32_t*)(writebuf + 12) = origfreq;
+
+    /* phone seq */
+	 phrase_length = chewing_utf8_strlen(buffer);
+	 writebuf[16] = phrase_length;
+	 pshort = (uint16_t*)(writebuf + 17);
+	 pos = strtok(zuin, " ");
+	 for (i=0; i<phrase_length && pos != NULL; i++) {
+	   /* TODO: check for errors, phrase length may differ from zhuin length */
+		*pshort = zhuin_to_inx(pos);
+		pos = strtok(NULL, " ");
+		++pshort;
+	 }
+
+	 /* phrase length in bytes */
+	 
+	 string_length = strlen(buffer);
+	 pchar = (uint8_t*)pshort;
+	 *pchar = string_length;
+	 memcpy(pchar+1, buffer, string_length);
+
+	 /* write to file */
+	 fwrite(writebuf, sizeof(writebuf), 1, file);
+
+    g_free(buffer);
+    g_free(zuin);
+  } while( gtk_tree_model_iter_next( GTK_TREE_MODEL(store), &iter ) );
+  fclose(file);
+}
+
+void
+file_save( gchar *fname )
+{
+	switch (che_get_hash_format())
+	{
+	case HF_TEXT:
+		file_save_txt(fname);
+		break;
+	case HF_BINARY:
+		file_save_bin(fname);
+		break;
+	}
 }
 
 void

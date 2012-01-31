@@ -80,3 +80,4 @@ int chewing_utf8_is_valid_str(char *str)
     };
     return 1;
 }
+
