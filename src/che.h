@@ -26,6 +26,7 @@ GtkTreeIter iter;
 gboolean is_editing_existing_phrase;
 GtkTreeSelection *selection;
 gchar *filename;
+GtkWidget *editor_dialog;
 
 GtkWidget *che_create_tree( GtkWindow* );
 GtkWidget *che_create_menu( GtkWindow* );

@@ -672,10 +672,9 @@ void che_phrase_dlg(const char *title)
   GtkWidget *dlg = gtk_dialog_new_with_buttons (title,
 						main_window,
 						GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
-						GTK_STOCK_OK,
-						GTK_RESPONSE_OK,
 						NULL);
   GtkWidget *dlgbox = (GtkWidget*)che_new_phrase_box();
+  editor_dialog = dlg;
   gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dlg)->vbox), dlgbox);
   g_signal_connect_swapped (dlg,
 			    "response",
@@ -833,6 +832,8 @@ void che_save_phrase(GtkWidget *obj, gpointer vbox)
 		      ORIGFREQ_COLUMN, 0,
 		      -1);
   }
+  /* close the editor dialog */
+  g_signal_emit_by_name(G_OBJECT(editor_dialog), "response", G_TYPE_NONE);
 }
 
 void append_text(GtkWidget *btn, gpointer entry)
