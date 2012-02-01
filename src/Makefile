@@ -1,6 +1,8 @@
 CFLAGS=-Wall -g
 LIB_GTK=`pkg-config gtk+-2.0 --cflags --libs` 
 
+all: che
+
 che: che.o key2pho-utf8.o chewing-utf8-util.o
 	gcc $(LIB_GTK) che.o key2pho-utf8.o chewing-utf8-util.o -o che
 

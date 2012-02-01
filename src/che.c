@@ -1,4 +1,5 @@
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include <iconv.h>
 #include <string.h>
 #include <stdlib.h>
@@ -53,6 +54,7 @@ che_create_tree( GtkWindow *parient )
   GtkTreeViewColumn *column;
   GtkCellRenderer *renderer;
   GtkWidget *tree;
+  void treeview_click_callback(GtkWidget *widget, GdkEvent *event, gpointer data);
 
   store = gtk_tree_store_new (N_COLUMNS,
 			      G_TYPE_STRING,
@@ -66,6 +68,9 @@ che_create_tree( GtkWindow *parient )
   tree = gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
   g_object_unref (G_OBJECT (store));
+
+  g_signal_connect(G_OBJECT(tree), "key-press-event",
+          G_CALLBACK (treeview_click_callback), NULL);
 
   /* PhoneSeq */
   renderer = gtk_cell_renderer_text_new ();
@@ -567,13 +572,15 @@ file_save( gchar *fname )
 }
 
 void
-che_remove_phrase(GtkWidget *menu)
+che_remove_phrase(GtkWidget *widget)
 {
-  gtk_tree_selection_get_selected(selection,
+  gboolean valid = gtk_tree_selection_get_selected(selection,
 				  NULL,
 				  &iter);
-  if( &iter != NULL )
-    gtk_tree_store_remove(store, &iter);
+  if (valid)
+    valid = gtk_tree_store_remove(store, &iter);
+  if (valid)
+    gtk_tree_selection_select_iter(selection, &iter); /* select the next item */
 }
 
 void
@@ -859,4 +866,16 @@ void button_click_callback(GtkWidget *cbtn, gpointer parent)
 		    G_CALLBACK (che_set_context),
 		    wp);
   gtk_widget_show_all(GTK_WIDGET(dlg));
+}
+
+void
+treeview_click_callback(GtkWidget *widget, GdkEvent *event, gpointer data)
+{
+	if (event->type == GDK_KEY_PRESS) {
+		switch (event->key.keyval) {
+		case GDK_Delete:
+			che_remove_phrase(widget);
+			break;
+		}
+	}
 }
