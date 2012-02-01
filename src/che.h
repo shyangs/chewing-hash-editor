@@ -1,3 +1,16 @@
+#include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
+#include <iconv.h>
+#include <string.h>
+#include <stdlib.h>
+#include <assert.h>
+#include "key2pho8.h"
+#include "key2pho-utf8.h"
+#include "chewing-utf8-util.h"
+
+#define FIELD_SIZE 125
+#define BIN_HASH_SIG "CBiH"
+
 enum {
 	SEQ_COLUMN,
 	ZUIN_COLUMN,
@@ -10,6 +23,7 @@ enum {
 
 GtkTreeStore *store;
 GtkTreeIter iter;
+gboolean is_editing_existing_phrase;
 GtkTreeSelection *selection;
 gchar *filename;
 
@@ -24,5 +38,5 @@ void file_save_as( GtkWindow* );
 void file_save( gchar* );
 void cell_edited(GtkCellRendererText *cellrenderertext, gchar *arg1, gchar *arg2, gpointer column);
 void che_new_phrase_dlg( GtkWidget* );
-void save_new_phrase(GtkWidget *obj, gpointer vbox);
+void che_save_phrase(GtkWidget *obj, gpointer vbox);
 void che_remove_phrase(GtkWidget *menu);

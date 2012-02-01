@@ -1,20 +1,9 @@
-#include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
-#include <iconv.h>
-#include <string.h>
-#include <stdlib.h>
-#include <assert.h>
 #include "che.h"
-#include "key2pho8.h"
-#include "key2pho-utf8.h"
-#include "chewing-utf8-util.h"
 
-#define FIELD_SIZE 125
-#define BIN_HASH_SIG "CBiH"
+GtkWidget *main_window;
 
 int main(int argc, char *argv[])
 {
-  GtkWidget *main_window;
   GtkWidget *menu;
   GtkWidget *tree;
   GtkWidget *scroll;
@@ -54,7 +43,8 @@ che_create_tree( GtkWindow *parient )
   GtkTreeViewColumn *column;
   GtkCellRenderer *renderer;
   GtkWidget *tree;
-  void treeview_click_callback(GtkWidget *widget, GdkEvent *event, gpointer data);
+  void treeview_keypress_callback(GtkWidget*, GdkEvent*, gpointer);
+  void treeview_row_activated_callback(GtkTreeView*, GtkTreePath*, GtkTreeViewColumn*, gpointer);
 
   store = gtk_tree_store_new (N_COLUMNS,
 			      G_TYPE_STRING,
@@ -70,7 +60,9 @@ che_create_tree( GtkWindow *parient )
   g_object_unref (G_OBJECT (store));
 
   g_signal_connect(G_OBJECT(tree), "key-press-event",
-          G_CALLBACK (treeview_click_callback), NULL);
+          G_CALLBACK (treeview_keypress_callback), NULL);
+  g_signal_connect(G_OBJECT(tree), "row-activated",
+          G_CALLBACK (treeview_row_activated_callback), NULL);
 
   /* PhoneSeq */
   renderer = gtk_cell_renderer_text_new ();
@@ -633,7 +625,7 @@ struct _widget_pair {
 typedef struct _widget_pair wp_t;
 
 GtkWidget *che_new_phrase_box();
-void entry_active(GtkWidget *obj, gpointer vbox);
+void entry_active_callback(GtkWidget *obj, gpointer vbox);
 void button_click_callback(GtkWidget *btn, gpointer parent);
 /*
 int main(int argc, char *argv[])
@@ -660,11 +652,26 @@ int main(int argc, char *argv[])
   return 0;
 }
 */
-void che_new_phrase_dlg(GtkWidget *btn)
+
+/* Show the phrase editor dialog for adding new phrases. */
+void che_new_phrase_dlg(GtkWidget *widget)
 {
-  GtkWidget *dlg = gtk_dialog_new_with_buttons ("設定注音",
-						NULL,
-						GTK_DIALOG_DESTROY_WITH_PARENT,
+  is_editing_existing_phrase = FALSE;
+  che_phrase_dlg("新增語詞");
+}
+
+/* Show the phrase editor dialog for editing an existing phrase. */
+void che_edit_phrase_dlg(GtkWidget *widget)
+{
+  is_editing_existing_phrase = TRUE;
+  che_phrase_dlg("編輯語詞");
+}
+
+void che_phrase_dlg(const char *title)
+{
+  GtkWidget *dlg = gtk_dialog_new_with_buttons (title,
+						main_window,
+						GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
 						GTK_STOCK_OK,
 						GTK_RESPONSE_OK,
 						NULL);
@@ -707,15 +714,34 @@ GtkWidget *che_new_phrase_box()
   gtk_box_pack_start_defaults( GTK_BOX(hbox0), GTK_WIDGET(btn) );
   gtk_box_pack_start_defaults( GTK_BOX(vbox_top), GTK_WIDGET(btn2));
 
+  if (is_editing_existing_phrase) { /* fill in the original data */
+    gchar *buffer, *zhuin;
+    gboolean valid = gtk_tree_selection_get_selected(selection,
+	      NULL,
+         &iter);
+    if (valid) {
+	   int length;
+      gtk_tree_model_get (GTK_TREE_MODEL(store), &iter,
+  			SEQ_COLUMN, &buffer,
+  			ZUIN_COLUMN, &zhuin,
+  			-1);
+  	   gtk_entry_set_text(entry, buffer);
+		entry_active(entry, (gpointer)vbox1, zhuin);
+
+  	   g_free(buffer);
+  	   g_free(zhuin);
+	 }
+  }
+
   g_signal_connect( G_OBJECT(entry), "activate",
-		    G_CALLBACK(entry_active), (gpointer)vbox1);
-  g_signal_connect( G_OBJECT(btn), "clicked", G_CALLBACK(entry_active), (gpointer)entry);
-  g_signal_connect( G_OBJECT(btn2), "clicked", G_CALLBACK(save_new_phrase), (gpointer)vbox1);
+		    G_CALLBACK(entry_active_callback), (gpointer)vbox1);
+  g_signal_connect( G_OBJECT(btn), "clicked", G_CALLBACK(entry_active_callback), (gpointer)entry);
+  g_signal_connect( G_OBJECT(btn2), "clicked", G_CALLBACK(che_save_phrase), (gpointer)vbox1);
   
   return vbox_top;
 }
 
-GtkWidget *che_new_label_button_box(char *tsi)
+GtkWidget *che_new_label_button_box(char *tsi, char *zhuin)
 {
   GtkWidget *hbox;
   GtkWidget *label;
@@ -725,21 +751,17 @@ GtkWidget *che_new_label_button_box(char *tsi)
   label = gtk_label_new(tsi);
   gtk_box_pack_start( GTK_BOX(hbox), GTK_WIDGET (label),
 		    FALSE, FALSE, 10);
-  button = gtk_button_new_with_label("        ");
+  button = gtk_button_new_with_label(zhuin);
   gtk_box_pack_start( GTK_BOX(hbox), GTK_WIDGET (button),
 		    FALSE, FALSE, 0);
   g_signal_connect( button, "clicked", G_CALLBACK(button_click_callback), (gpointer)(GTK_WIDGET(hbox)->parent));
   return hbox;  
 }
 
-void entry_active(GtkWidget *obj, gpointer vbox)
+void entry_active(GtkWidget *obj, gpointer vbox, const char *zhuin)
 {
-  if(!GTK_IS_ENTRY(obj))
-    {
-      g_signal_emit_by_name(G_OBJECT(vbox), "activate", G_TYPE_NONE);
-      return;
-    }
   int i, length;
+  char *chr_zhuin;
   GtkWidget *box = vbox;
   GtkWidget *bl;
   gchar buf[4];
@@ -747,22 +769,38 @@ void entry_active(GtkWidget *obj, gpointer vbox)
   length = chewing_utf8_strlen(text);
 
   gtk_container_foreach(GTK_CONTAINER(box), gtk_widget_destroy, NULL);
-  
-  for(i = 0; i < length; i++)
-    {
-      chewing_utf8_strncpy(buf, chewing_utf8_strseek(text, i), 1, 1);
-      bl = che_new_label_button_box(buf);
-      gtk_widget_show_all(GTK_WIDGET(bl));
-      gtk_box_pack_start_defaults( GTK_BOX(box), GTK_WIDGET (bl));
-    }
+
+  if (zhuin)
+    chr_zhuin = strtok(zhuin, " ");
+  else
+    chr_zhuin = "      ";
+  for(i = 0; i < length; i++) {
+    chewing_utf8_strncpy(buf, chewing_utf8_strseek(text, i), 1, 1);
+    bl = che_new_label_button_box(buf, chr_zhuin);
+    gtk_widget_show_all(GTK_WIDGET(bl));
+    gtk_box_pack_start_defaults( GTK_BOX(box), GTK_WIDGET (bl));
+	 if (zhuin)
+	   chr_zhuin = strtok(NULL, " ");
+  }
 }
 
-void save_new_phrase(GtkWidget *obj, gpointer vbox)
+void entry_active_callback(GtkWidget *obj, gpointer vbox)
+{
+  if(!GTK_IS_ENTRY(obj))
+    {
+      g_signal_emit_by_name(G_OBJECT(vbox), "activate", G_TYPE_NONE);
+      return;
+    }
+  entry_active(obj, vbox, NULL);
+}
+
+void che_save_phrase(GtkWidget *obj, gpointer vbox)
 {
   GtkWidget *box = vbox;
   GtkWidget *hbox;
   char zuin[256];
   char phrase[256];
+  gboolean valid;
 
   GList *hboxes = gtk_container_get_children(GTK_CONTAINER(box));
   hboxes = g_list_first(hboxes);
@@ -779,8 +817,14 @@ void save_new_phrase(GtkWidget *obj, gpointer vbox)
     }
   while((hboxes = g_list_next(hboxes)) != NULL);
   
-  gtk_tree_store_prepend (store, &iter, NULL);
-  gtk_tree_store_set (store, &iter,
+
+  if (is_editing_existing_phrase)
+    valid = gtk_tree_selection_get_selected(selection, NULL, &iter);
+  else
+    gtk_tree_store_prepend (store, &iter, NULL), valid = TRUE;
+
+  if (valid) {
+    gtk_tree_store_set (store, &iter,
 		      SEQ_COLUMN, phrase,
 		      ZUIN_COLUMN, zuin,
 		      USERFREQ_COLUMN, 0,
@@ -788,6 +832,7 @@ void save_new_phrase(GtkWidget *obj, gpointer vbox)
 		      MAXFREQ_COLUMN, 0,
 		      ORIGFREQ_COLUMN, 0,
 		      -1);
+  }
 }
 
 void append_text(GtkWidget *btn, gpointer entry)
@@ -820,11 +865,12 @@ void button_click_callback(GtkWidget *cbtn, gpointer parent)
   GtkWidget *hbox, *btn, *entry;
   GtkWidget *dlg = gtk_dialog_new_with_buttons ("設定注音",
 						GTK_WINDOW(window),
-						GTK_DIALOG_DESTROY_WITH_PARENT,
+						GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
 						GTK_STOCK_OK,
 						GTK_RESPONSE_OK,
 						NULL);
   entry = gtk_entry_new();
+  gtk_entry_set_text(entry, gtk_button_get_label(cbtn));
   gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dlg)->vbox), entry);
   hbox = gtk_hbox_new(FALSE, 0);
   for(i = 0; i < 11; i++)
@@ -869,7 +915,7 @@ void button_click_callback(GtkWidget *cbtn, gpointer parent)
 }
 
 void
-treeview_click_callback(GtkWidget *widget, GdkEvent *event, gpointer data)
+treeview_keypress_callback(GtkWidget *widget, GdkEvent *event, gpointer data)
 {
 	if (event->type == GDK_KEY_PRESS) {
 		switch (event->key.keyval) {
@@ -878,4 +924,12 @@ treeview_click_callback(GtkWidget *widget, GdkEvent *event, gpointer data)
 			break;
 		}
 	}
+}
+
+
+void
+treeview_row_activated_callback(GtkTreeView* treeview,
+	GtkTreePath* path, GtkTreeViewColumn* column, gpointer ptr)
+{
+	che_edit_phrase_dlg(treeview);
 }
