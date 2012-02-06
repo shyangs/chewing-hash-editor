@@ -7,6 +7,7 @@
 #include "key2pho8.h"
 #include "key2pho-utf8.h"
 #include "chewing-utf8-util.h"
+#include "zhuindict.h"
 
 #define FIELD_SIZE 125
 #define BIN_HASH_SIG "CBiH"
@@ -32,6 +33,10 @@ GtkWidget *che_create_tree( GtkWindow* );
 GtkWidget *che_create_menu( GtkWindow* );
 void che_read_hash(gchar *filename);
 void convert(char*, char*, int);
+
+struct zhuindict *zhuin_dictionary;
+
+gboolean is_file_saved;
 
 /* callback */
 void file_open( GtkWindow* );

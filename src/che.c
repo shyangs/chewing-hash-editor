@@ -30,8 +30,13 @@ int main(int argc, char *argv[])
   tree = che_create_tree(GTK_WINDOW(main_window));
   gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), tree);
 
+  zhuin_dictionary = zhuindict_loadfromfile("char.src");
+  is_file_saved = FALSE;
+
   gtk_widget_show_all( main_window );
   gtk_main();
+
+  zhuindict_free(zhuin_dictionary);
 
   g_free(filename);
   return 0;
@@ -561,6 +566,7 @@ file_save( gchar *fname )
 		file_save_bin(fname);
 		break;
 	}
+	is_file_saved = TRUE;
 }
 
 void
@@ -706,7 +712,7 @@ GtkWidget *che_new_phrase_box()
 		      FALSE, FALSE, 0);
   label = gtk_label_new("新詞：");
   entry = gtk_entry_new_with_max_length(20);
-  btn = gtk_button_new_with_label("OK");
+  btn = gtk_button_new_with_label("轉成注音");
   btn2 = gtk_button_new_from_stock(GTK_STOCK_SAVE);
   gtk_box_pack_start_defaults( GTK_BOX(hbox0), GTK_WIDGET(label) );
   gtk_box_pack_start_defaults( GTK_BOX(hbox0), GTK_WIDGET(entry) );
@@ -775,6 +781,10 @@ void entry_active(GtkWidget *obj, gpointer vbox, const char *zhuin)
     chr_zhuin = "      ";
   for(i = 0; i < length; i++) {
     chewing_utf8_strncpy(buf, chewing_utf8_strseek(text, i), 1, 1);
+    if (zhuin_dictionary) { /* try to find the zhuin for the chinese character */
+      chr_zhuin = find_zhuin(zhuin_dictionary, buf);
+      if (!chr_zhuin) chr_zhuin = "      ";
+    }
     bl = che_new_label_button_box(buf, chr_zhuin);
     gtk_widget_show_all(GTK_WIDGET(bl));
     gtk_box_pack_start_defaults( GTK_BOX(box), GTK_WIDGET (bl));
@@ -834,6 +844,7 @@ void che_save_phrase(GtkWidget *obj, gpointer vbox)
   }
   /* close the editor dialog */
   g_signal_emit_by_name(G_OBJECT(editor_dialog), "response", G_TYPE_NONE);
+  is_file_saved = FALSE;
 }
 
 void append_text(GtkWidget *btn, gpointer entry)
