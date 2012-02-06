@@ -153,9 +153,13 @@ che_create_menu( GtkWindow *parient )
   GtkWidget *edit_menu_remove;
   GtkWidget *edit_menu_format;
   GtkWidget *format_menu;
-  GSList    *format_group = 0;
+  GSList    *format_group = NULL;
   GtkWidget *separate;
   GtkWidget *separate2;
+  GtkAccelGroup *accel_group = NULL;
+
+  accel_group = gtk_accel_group_new();
+  gtk_window_add_accel_group(GTK_WINDOW(main_window), accel_group);
 	
   file_menu = gtk_menu_new();
   file_menu_open = gtk_image_menu_item_new_from_stock (GTK_STOCK_OPEN, NULL);
@@ -178,6 +182,8 @@ che_create_menu( GtkWindow *parient )
 
   edit_menu = gtk_menu_new();
   edit_menu_newtsi = gtk_menu_item_new_with_mnemonic ("_New Phrase");
+  gtk_widget_add_accelerator(edit_menu_newtsi, "activate", accel_group,
+             GDK_n, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   g_signal_connect (G_OBJECT (edit_menu_newtsi), "activate", G_CALLBACK (che_new_phrase_dlg), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_newtsi);
   edit_menu_remove = gtk_menu_item_new_with_mnemonic ("_Remove");
