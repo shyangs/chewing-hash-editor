@@ -39,6 +39,11 @@ int main(int argc, char *argv[])
 
   is_file_saved = FALSE;
 
+  if (argc >= 2)
+    che_read_hash(argv[1]);
+  else
+    file_open(main_window);
+
   gtk_widget_show_all( main_window );
   gtk_main();
 
@@ -64,7 +69,6 @@ che_create_tree( GtkWindow *parient )
 			      G_TYPE_INT,
 			      G_TYPE_INT,
 			      G_TYPE_INT);
-  file_open(parient);
 	
   tree = main_tree_view = gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
@@ -149,6 +153,7 @@ che_create_menu( GtkWindow *parient )
   GtkWidget *menu_bar;
   GtkWidget *menu_bar_file;
   GtkWidget *menu_bar_edit;
+  GtkWidget *menu_bar_about;
   GtkWidget *file_menu;
   GtkWidget *file_menu_open;
   GtkWidget *file_menu_save;
@@ -226,9 +231,12 @@ che_create_menu( GtkWindow *parient )
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (menu_bar_file), file_menu);
   menu_bar_edit = gtk_menu_item_new_with_mnemonic ("_Edit");
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (menu_bar_edit), edit_menu);
+  menu_bar_about = gtk_menu_item_new_with_mnemonic ("_About");
+  g_signal_connect (G_OBJECT (menu_bar_about), "activate", G_CALLBACK (che_show_about_dlg), NULL);
 
   gtk_menu_bar_append (GTK_MENU_BAR (menu_bar), menu_bar_file);
   gtk_menu_bar_append (GTK_MENU_BAR (menu_bar), menu_bar_edit);
+  gtk_menu_bar_append (GTK_MENU_BAR (menu_bar), menu_bar_about);
 
   return menu_bar;
 }
@@ -1097,4 +1105,29 @@ void che_show_search_dlg(GtkWidget *widget)
 			    G_CALLBACK (gtk_widget_destroy),
 			    dlg);
   gtk_widget_show_all(GTK_WIDGET(dlg));
+}
+
+void che_show_about_dlg(GtkWidget *widget)
+{
+	const char *authors[] = {
+		"(2005) Kanru Chen <kanru.96@stu.csie.ncnu.edu.tw>",
+		"(2012) Timothy Lin <lzh9102@gmail.com>",
+		NULL };
+
+	GtkAboutDialog *dialog = gtk_about_dialog_new();
+
+	gtk_about_dialog_set_program_name(dialog, "新注音詞庫編輯器");
+	gtk_about_dialog_set_authors(dialog, authors);
+	gtk_about_dialog_set_version(dialog, "2.0");
+	gtk_about_dialog_set_comments(dialog, "編輯新酷音(libchewing 1.3.x)的二進位詞庫\n"
+	                                      "使用者詞庫位於~/.chewing/uhash.dat");
+	gtk_about_dialog_set_website(dialog, "http://code.google.com/p/chewing-hash-editor");
+	gtk_about_dialog_set_website_label(dialog, "開啟專案首頁");
+
+	gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+	gtk_window_set_transient_for(dialog, main_window);
+
+	gtk_dialog_run(dialog);
+
+	gtk_widget_destroy(dialog);
 }

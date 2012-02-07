@@ -53,3 +53,4 @@ void che_new_phrase_dlg( GtkWidget* );
 void che_save_phrase(GtkWidget *obj, gpointer vbox);
 void che_remove_phrase(GtkWidget *menu);
 void che_show_search_dlg(GtkWidget *widget);
+void che_show_about_dlg(GtkWidget *widget);
