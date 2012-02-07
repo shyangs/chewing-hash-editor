@@ -268,6 +268,7 @@ che_read_hash_txt(gchar *filename)
   memset(buffer, 0, ls);
   ubuffer = (gchar *)calloc(1, sizeof(gchar) * rs);
   hash = fopen(filename, "rb");
+  chewing_lifetime = 0;
 
   setlocale(LC_CTYPE, "zh_TW.UTF-8");
   while(1)
@@ -333,7 +334,8 @@ che_read_hash_bin(gchar *filename)
   ubuffer = (gchar *)calloc(1, sizeof(gchar) * rs);
   hash = fopen(filename, "rb");
 
-  fseek(hash, header_length, SEEK_SET); /* skip header */
+  fseek(hash, strlen(BIN_HASH_SIG), SEEK_SET); /* skip signature */
+  fread(&chewing_lifetime, sizeof(uint32_t), 1, hash);
 
   setlocale(LC_CTYPE, "zh_TW.UTF-8");
   while(1)
@@ -510,7 +512,6 @@ file_save_bin( gchar *fname )
   uint16_t *pshort;
   uint8_t *pchar;
   FILE *file;
-  uint32_t chewing_lifetime = 0;
   int i;
 
   if ( fname == NULL )
@@ -850,11 +851,14 @@ void che_save_phrase(GtkWidget *obj, gpointer vbox)
     gtk_tree_store_set (store, &iter,
 		      SEQ_COLUMN, phrase,
 		      ZUIN_COLUMN, zuin,
+		      -1);
+    if (!is_editing_existing_phrase) {
+      gtk_tree_store_set (store, &iter,
 		      USERFREQ_COLUMN, 0,
 		      TIME_COLUMN, 0,
 		      MAXFREQ_COLUMN, 0,
-		      ORIGFREQ_COLUMN, 0,
-		      -1);
+		      ORIGFREQ_COLUMN, 0, -1);
+	 }
   }
   /* close the editor dialog */
   g_signal_emit_by_name(G_OBJECT(editor_dialog), "response", G_TYPE_NONE);

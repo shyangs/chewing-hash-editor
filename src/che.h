@@ -40,6 +40,7 @@ struct zhuindict *zhuin_dictionary;
 
 gboolean is_file_saved;
 gchar prev_search_text[0xff] = {};
+uint32_t chewing_lifetime = 0;
 
 /* callback */
 void file_open( GtkWindow* );
