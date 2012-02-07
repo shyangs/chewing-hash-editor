@@ -28,7 +28,9 @@ int main(int argc, char *argv[])
   gtk_box_pack_start(GTK_BOX(vbox), scroll, TRUE, TRUE, 0);
 
   tree = che_create_tree(GTK_WINDOW(main_window));
-  gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), tree);
+  //gtk_scrolled_window_add_with_viewport(GTK_SCROLLED_WINDOW(scroll), tree); /* this breaks scrolling */
+  /* GtkTreeView has its native scrolling mechanism, so we don't need a viewport */
+  gtk_container_add(scroll, tree); 
 
   zhuin_dictionary = zhuindict_loadfromfile("char.src");
   is_file_saved = FALSE;
@@ -60,7 +62,7 @@ che_create_tree( GtkWindow *parient )
 			      G_TYPE_INT);
   file_open(parient);
 	
-  tree = gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
+  tree = main_tree_view = gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
   selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
   g_object_unref (G_OBJECT (store));
 
@@ -151,6 +153,7 @@ che_create_menu( GtkWindow *parient )
   GtkWidget *edit_menu;
   GtkWidget *edit_menu_newtsi;
   GtkWidget *edit_menu_remove;
+  GtkWidget *edit_menu_search;
   GtkWidget *edit_menu_format;
   GtkWidget *format_menu;
   GSList    *format_group = NULL;
@@ -189,6 +192,11 @@ che_create_menu( GtkWindow *parient )
   edit_menu_remove = gtk_menu_item_new_with_mnemonic ("_Remove");
   g_signal_connect (G_OBJECT (edit_menu_remove), "activate", G_CALLBACK (che_remove_phrase), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_remove);
+  edit_menu_search = gtk_menu_item_new_with_mnemonic ("_Search");
+  gtk_widget_add_accelerator(edit_menu_search, "activate", accel_group,
+             GDK_f, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
+  g_signal_connect (G_OBJECT (edit_menu_search), "activate", G_CALLBACK (che_show_search_dlg), NULL);
+  gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_search);
   separate2 = gtk_separator_menu_item_new();
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), separate2);
   edit_menu_format = gtk_menu_item_new_with_mnemonic ("_Format");
@@ -944,10 +952,129 @@ treeview_keypress_callback(GtkWidget *widget, GdkEvent *event, gpointer data)
 	}
 }
 
-
 void
 treeview_row_activated_callback(GtkTreeView* treeview,
 	GtkTreePath* path, GtkTreeViewColumn* column, gpointer ptr)
 {
 	che_edit_phrase_dlg(treeview);
+}
+
+int match_phrase(char *key, char *text)
+{
+	if (strlen(key) > strlen(text)) return 0;
+	return memcmp(key, text, strlen(key)) == 0;
+}
+
+/* select the row and make it visible */
+void che_select_row(GtkTreeIter *it)
+{
+	GtkTreeModel *model;
+	GtkTreePath *path;
+	gtk_tree_selection_select_iter(selection, it);
+	gtk_tree_selection_get_selected(selection, &model, it);
+	if (model) {
+		path = gtk_tree_model_get_path(model, it);
+		if (path) {
+			gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(main_tree_view), path, NULL, FALSE, 0, 0);
+			gtk_tree_path_free(path);
+		}
+	}
+}
+
+void search_phrase_callback(GtkWidget *obj, gpointer entry)
+{
+  gchar *ptr;
+  gchar buffer[256];
+  const gchar *entry_text;
+  gboolean valid;
+
+  entry_text = gtk_entry_get_text(entry);
+  if (strlen(entry_text) == 0) goto finished;
+
+  /* get the selected item */
+  valid = gtk_tree_selection_get_selected(selection, NULL, &iter);
+  if (valid) /* begin searching with the next item */
+    valid = gtk_tree_model_iter_next( GTK_TREE_MODEL(store), &iter);
+  else /* if there's no item selected, begin with the first item */
+    valid = gtk_tree_model_get_iter_first( GTK_TREE_MODEL(store), &iter);
+
+  if (valid) {
+    int i;
+	 for (i=0; i<2; i++) {
+      do {
+        gtk_tree_model_get (GTK_TREE_MODEL(store), &iter,
+    			SEQ_COLUMN, &ptr,
+    			-1); 
+        strcpy(buffer, ptr);
+		  //printf("phrase: %s\n", buffer);
+        g_free(ptr);
+        if (match_phrase(entry_text, buffer)) {
+		    che_select_row(&iter);
+  		    goto finished;
+        }
+      } while (gtk_tree_model_iter_next( GTK_TREE_MODEL(store), &iter));
+		gtk_tree_model_get_iter_first( GTK_TREE_MODEL(store), &iter); /* wrap search */
+    }
+	 /* phrase not found */
+	 
+  }
+
+finished:
+  strcpy(prev_search_text, entry_text);
+
+  /* close the search dialog */
+  g_signal_emit_by_name(G_OBJECT(search_dialog), "response", G_TYPE_NONE);
+}
+
+GtkWidget *che_new_search_box()
+{
+  GtkWidget *vbox_top;
+  GtkWidget *vbox0;
+  GtkWidget *hbox0;
+  GtkWidget *vbox1;
+  GtkWidget *vbox2;
+  GtkWidget *label;
+  GtkWidget *entry;
+  GtkWidget *btn;
+  
+  vbox_top = gtk_vbox_new(FALSE, 1);
+  vbox0 = gtk_vbox_new(FALSE, 1);
+  hbox0 = gtk_hbox_new(FALSE, 1);
+  vbox1 = gtk_vbox_new(FALSE, 1);
+  gtk_box_pack_start( GTK_BOX(vbox_top), GTK_WIDGET(vbox0),
+		      FALSE, FALSE, 0);
+  gtk_box_pack_start( GTK_BOX(vbox0), GTK_WIDGET(hbox0),
+		      FALSE, FALSE, 0);
+  gtk_box_pack_start( GTK_BOX(vbox_top), GTK_WIDGET(vbox1),
+		      FALSE, FALSE, 0);
+  label = gtk_label_new("搜尋開頭文字：");
+  entry = gtk_entry_new_with_max_length(20);
+  btn = gtk_button_new_with_label("確定");
+  gtk_box_pack_start_defaults( GTK_BOX(hbox0), GTK_WIDGET(label) );
+  gtk_box_pack_start_defaults( GTK_BOX(hbox0), GTK_WIDGET(entry) );
+  gtk_box_pack_start_defaults( GTK_BOX(hbox0), GTK_WIDGET(btn) );
+
+  gtk_entry_set_text(entry, prev_search_text);
+
+  g_signal_connect( G_OBJECT(entry), "activate",
+		    G_CALLBACK(search_phrase_callback), (gpointer)entry);
+  g_signal_connect( G_OBJECT(btn), "clicked", G_CALLBACK(search_phrase_callback), (gpointer)entry);
+  
+  return vbox_top;
+}
+
+void che_show_search_dlg(GtkWidget *widget)
+{
+  GtkWidget *dlg = gtk_dialog_new_with_buttons ("搜尋",
+						main_window,
+						GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
+						NULL);
+  GtkWidget *dlgbox = (GtkWidget*)che_new_search_box();
+  search_dialog = dlg;
+  gtk_box_pack_start_defaults(GTK_BOX(GTK_DIALOG(dlg)->vbox), dlgbox);
+  g_signal_connect_swapped (dlg,
+			    "response",
+			    G_CALLBACK (gtk_widget_destroy),
+			    dlg);
+  gtk_widget_show_all(GTK_WIDGET(dlg));
 }

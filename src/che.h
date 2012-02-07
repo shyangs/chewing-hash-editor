@@ -26,8 +26,10 @@ GtkTreeStore *store;
 GtkTreeIter iter;
 gboolean is_editing_existing_phrase;
 GtkTreeSelection *selection;
+GtkTreeView *main_tree_view;
 gchar *filename;
 GtkWidget *editor_dialog;
+GtkWidget *search_dialog;
 
 GtkWidget *che_create_tree( GtkWindow* );
 GtkWidget *che_create_menu( GtkWindow* );
@@ -37,6 +39,7 @@ void convert(char*, char*, int);
 struct zhuindict *zhuin_dictionary;
 
 gboolean is_file_saved;
+gchar prev_search_text[0xff] = {};
 
 /* callback */
 void file_open( GtkWindow* );
@@ -46,3 +49,4 @@ void cell_edited(GtkCellRendererText *cellrenderertext, gchar *arg1, gchar *arg2
 void che_new_phrase_dlg( GtkWidget* );
 void che_save_phrase(GtkWidget *obj, gpointer vbox);
 void che_remove_phrase(GtkWidget *menu);
+void che_show_search_dlg(GtkWidget *widget);
