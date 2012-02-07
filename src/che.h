@@ -29,7 +29,7 @@ GtkTreeIter iter;
 gboolean is_editing_existing_phrase;
 GtkTreeSelection *selection;
 GtkTreeView *main_tree_view;
-gchar *filename;
+gchar current_filename[1024];
 GtkWidget *editor_dialog;
 GtkWidget *search_dialog;
 

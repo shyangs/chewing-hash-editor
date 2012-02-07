@@ -49,7 +49,6 @@ int main(int argc, char *argv[])
 
   zhuindict_free(zhuin_dictionary);
 
-  g_free(filename);
   return 0;
 }
 
@@ -427,6 +426,7 @@ che_read_hash(gchar *filename)
 		else /* fallback to text hash */
 			che_read_hash_txt(filename), che_set_hash_format(HF_TEXT);
 #endif
+		strcpy(current_filename, filename);
 	}
 }
 
@@ -446,10 +446,11 @@ file_open( GtkWindow *parient )
 
   if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
     {
-      g_free (filename);
+	   gchar *filename;
       gtk_tree_store_clear( store );
       filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
       che_read_hash(filename);
+		g_free(filename);
     }
 
   gtk_widget_destroy (dialog);
@@ -470,9 +471,10 @@ file_save_as( GtkWindow *parient )
 
   if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
     {
-      g_free (filename);
+	   gchar *filename;
       filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
       file_save( filename );
+      g_free (filename);
     }
 
   gtk_widget_destroy (dialog);
@@ -488,7 +490,7 @@ file_save_txt( gchar *fname )
   FILE *file;
 
   if ( fname == NULL )
-    file = fopen( filename, "w" );
+    file = fopen( current_filename, "w" );
   else
     file = fopen( fname, "w" );
 
@@ -535,7 +537,7 @@ file_save_bin( gchar *fname )
   int i;
 
   if ( fname == NULL )
-    file = fopen( filename, "wb" );
+    file = fopen( current_filename, "wb" );
   else
     file = fopen( fname, "wb" );
 
@@ -606,6 +608,8 @@ file_save( gchar *fname )
 	file_save_bin(fname); /* always save as binary hash */
 #endif
 	is_file_saved = TRUE;
+	if (fname)
+		strcpy(current_filename, fname);
 }
 
 void
