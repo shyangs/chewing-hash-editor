@@ -84,14 +84,14 @@ che_create_tree( GtkWindow *parient )
   g_object_set (G_OBJECT (renderer),
 		"foreground", "darkblue",
 		NULL);
-  column = gtk_tree_view_column_new_with_attributes ("PhoneSeq", renderer,
+  column = gtk_tree_view_column_new_with_attributes ("語詞", renderer,
 						     "text", SEQ_COLUMN,
 						     NULL);
   gtk_tree_view_append_column (GTK_TREE_VIEW (tree), column);
 
   /* Zuin */
   renderer = gtk_cell_renderer_text_new ();
-  column = gtk_tree_view_column_new_with_attributes ("Zuin", renderer,
+  column = gtk_tree_view_column_new_with_attributes ("注音", renderer,
 						     "text", ZUIN_COLUMN,
 						     NULL);
   gtk_tree_view_append_column (GTK_TREE_VIEW (tree), column);
