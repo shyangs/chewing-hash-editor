@@ -205,6 +205,7 @@ che_create_menu( GtkWindow *parient )
              GDK_f, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   g_signal_connect (G_OBJECT (edit_menu_search), "activate", G_CALLBACK (che_show_search_dlg), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_search);
+#ifdef ENABLE_TEXT_HASH
   separate2 = gtk_separator_menu_item_new();
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), separate2);
   edit_menu_format = gtk_menu_item_new_with_mnemonic ("_Format");
@@ -218,6 +219,7 @@ che_create_menu( GtkWindow *parient )
   format_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (format_menu_binary));
   gtk_menu_shell_append (GTK_MENU_SHELL (format_menu), format_menu_binary);
   gtk_menu_item_set_submenu(GTK_MENU_ITEM (edit_menu_format), format_menu);
+#endif
 
   menu_bar = gtk_menu_bar_new ();
   menu_bar_file = gtk_menu_item_new_with_mnemonic ("_File");
@@ -413,8 +415,10 @@ che_read_hash(gchar *filename)
 		fclose(f);
 		if (memcmp(head, BIN_HASH_SIG, strlen(BIN_HASH_SIG)) == 0) /* binary hash */
 			che_read_hash_bin(filename), che_set_hash_format(HF_BINARY);
+#ifdef ENABLE_TEXT_HASH
 		else /* fallback to text hash */
 			che_read_hash_txt(filename), che_set_hash_format(HF_TEXT);
+#endif
 	}
 }
 
@@ -580,6 +584,7 @@ file_save_bin( gchar *fname )
 void
 file_save( gchar *fname )
 {
+#ifdef ENABLE_TEXT_HASH
 	switch (che_get_hash_format())
 	{
 	case HF_TEXT:
@@ -589,6 +594,9 @@ file_save( gchar *fname )
 		file_save_bin(fname);
 		break;
 	}
+#else
+	file_save_bin(fname); /* always save as binary hash */
+#endif
 	is_file_saved = TRUE;
 }
 

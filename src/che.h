@@ -12,6 +12,7 @@
 #define FIELD_SIZE 125
 #define BIN_HASH_SIG "CBiH"
 #define ZHUIN_DICTIONARY_FILE "zhuin.txt"
+//#define ENABLE_TEXT_HASH
 
 enum {
 	SEQ_COLUMN,
