@@ -9,6 +9,11 @@ int main(int argc, char *argv[])
   GtkWidget *scroll;
   GtkWidget *vbox;
 
+  /* load zhuin dictionary */
+  zhuin_dictionary = zhuindict_loadfromfile(ZHUIN_DICTIONARY_FILE );
+  if (!zhuin_dictionary)
+    printf("WARNING: failed to load the zhuin database \"%s\"\n", ZHUIN_DICTIONARY_FILE);
+
   gtk_init(&argc, &argv);
 
   main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -32,7 +37,6 @@ int main(int argc, char *argv[])
   /* GtkTreeView has its native scrolling mechanism, so we don't need a viewport */
   gtk_container_add(scroll, tree); 
 
-  zhuin_dictionary = zhuindict_loadfromfile("char.src");
   is_file_saved = FALSE;
 
   gtk_widget_show_all( main_window );

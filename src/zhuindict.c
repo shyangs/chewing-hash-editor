@@ -100,7 +100,8 @@ zhuindict_search(struct zhuindict *ptr, const char *s)
 void
 zhuindict_free(struct zhuindict *ptr)
 {
-	int i;
+	if (!ptr)
+		return;
 	entryarr_free(ptr->arr, ptr->size);
 	free(ptr);
 }
