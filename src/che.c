@@ -197,15 +197,15 @@ che_create_menu( GtkWindow *parient )
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_quit);
 
   edit_menu = gtk_menu_new();
-  edit_menu_newtsi = gtk_menu_item_new_with_mnemonic ("_New Phrase");
+  edit_menu_newtsi = gtk_menu_item_new_with_mnemonic ("新增語詞(_N)");
   gtk_widget_add_accelerator(edit_menu_newtsi, "activate", accel_group,
              GDK_n, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   g_signal_connect (G_OBJECT (edit_menu_newtsi), "activate", G_CALLBACK (che_new_phrase_dlg), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_newtsi);
-  edit_menu_remove = gtk_menu_item_new_with_mnemonic ("_Remove");
+  edit_menu_remove = gtk_menu_item_new_with_mnemonic ("移除語詞(_R)");
   g_signal_connect (G_OBJECT (edit_menu_remove), "activate", G_CALLBACK (che_remove_phrase), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_remove);
-  edit_menu_search = gtk_menu_item_new_with_mnemonic ("_Search");
+  edit_menu_search = gtk_menu_item_new_with_mnemonic ("搜尋(_S)");
   gtk_widget_add_accelerator(edit_menu_search, "activate", accel_group,
              GDK_f, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   g_signal_connect (G_OBJECT (edit_menu_search), "activate", G_CALLBACK (che_show_search_dlg), NULL);
@@ -213,25 +213,25 @@ che_create_menu( GtkWindow *parient )
 #ifdef ENABLE_TEXT_HASH
   separate2 = gtk_separator_menu_item_new();
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), separate2);
-  edit_menu_format = gtk_menu_item_new_with_mnemonic ("_Format");
+  edit_menu_format = gtk_menu_item_new_with_mnemonic ("格式(_F)");
   gtk_menu_shell_append (GTK_MENU_SHELL (edit_menu), edit_menu_format);
 
   format_menu = gtk_menu_new();
-  format_menu_text = gtk_radio_menu_item_new_with_mnemonic(format_group, "_Text");
+  format_menu_text = gtk_radio_menu_item_new_with_mnemonic(format_group, "文字(_T)");
   format_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (format_menu_text));
   gtk_menu_shell_append (GTK_MENU_SHELL (format_menu), format_menu_text);
-  format_menu_binary = gtk_radio_menu_item_new_with_mnemonic(format_group, "_Binary");
+  format_menu_binary = gtk_radio_menu_item_new_with_mnemonic(format_group, "二進位(_B)");
   format_group = gtk_radio_menu_item_get_group (GTK_RADIO_MENU_ITEM (format_menu_binary));
   gtk_menu_shell_append (GTK_MENU_SHELL (format_menu), format_menu_binary);
   gtk_menu_item_set_submenu(GTK_MENU_ITEM (edit_menu_format), format_menu);
 #endif
 
   menu_bar = gtk_menu_bar_new ();
-  menu_bar_file = gtk_menu_item_new_with_mnemonic ("_File");
+  menu_bar_file = gtk_menu_item_new_with_mnemonic ("檔案(_F)");
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (menu_bar_file), file_menu);
-  menu_bar_edit = gtk_menu_item_new_with_mnemonic ("_Edit");
+  menu_bar_edit = gtk_menu_item_new_with_mnemonic ("編輯(_E)");
   gtk_menu_item_set_submenu (GTK_MENU_ITEM (menu_bar_edit), edit_menu);
-  menu_bar_about = gtk_menu_item_new_with_mnemonic ("_About");
+  menu_bar_about = gtk_menu_item_new_with_mnemonic ("關於(_A)");
   g_signal_connect (G_OBJECT (menu_bar_about), "activate", G_CALLBACK (che_show_about_dlg), NULL);
 
   gtk_menu_bar_append (GTK_MENU_BAR (menu_bar), menu_bar_file);
