@@ -172,10 +172,14 @@ che_create_menu( GtkWindow *parient )
   file_menu_open = gtk_image_menu_item_new_from_stock (GTK_STOCK_OPEN, NULL);
   g_signal_connect_swapped (G_OBJECT (file_menu_open), "activate",
 			    G_CALLBACK (file_open), parient);
+  gtk_widget_add_accelerator(file_menu_open, "activate", accel_group,
+             GDK_o, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_open);
   file_menu_save = gtk_image_menu_item_new_from_stock (GTK_STOCK_SAVE, NULL);
   g_signal_connect_swapped (G_OBJECT (file_menu_save), "activate",
 			    G_CALLBACK (file_save), NULL);
+  gtk_widget_add_accelerator(file_menu_save, "activate", accel_group,
+             GDK_s, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE);
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_save);
   file_menu_saveas = gtk_image_menu_item_new_from_stock (GTK_STOCK_SAVE_AS, NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_saveas);
