@@ -158,6 +158,7 @@ che_create_menu( GtkWindow *parient )
   GtkWidget *file_menu_save;
   GtkWidget *file_menu_saveas;
   GtkWidget *file_menu_quit;
+  GtkWidget *file_menu_export;
   GtkWidget *edit_menu;
   GtkWidget *edit_menu_newtsi;
   GtkWidget *edit_menu_remove;
@@ -189,6 +190,10 @@ che_create_menu( GtkWindow *parient )
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_saveas);
   g_signal_connect_swapped (G_OBJECT (file_menu_saveas), "activate",
 			    G_CALLBACK (file_save_as), parient);
+  file_menu_export = gtk_menu_item_new_with_mnemonic ("匯出(_E)");
+  g_signal_connect_swapped (G_OBJECT (file_menu_export), "activate",
+		       G_CALLBACK (file_export), NULL);
+  gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_export);
   separate = gtk_separator_menu_item_new();
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), separate);
   file_menu_quit = gtk_image_menu_item_new_from_stock (GTK_STOCK_QUIT, NULL);
@@ -610,6 +615,66 @@ file_save( gchar *fname )
 	is_file_saved = TRUE;
 	if (fname)
 		strcpy(current_filename, fname);
+}
+
+/* export the database to a text file */
+void
+file_export_as_text( gchar *fname )
+{
+  gchar *zuin;
+  gchar *buffer, buf[125], str[125];
+  gchar *pos;
+  gint userfreq, time, maxfreq, origfreq;
+  FILE *file;
+
+  if ( fname == NULL )
+    return;
+
+  file = fopen( fname, "w" );
+
+  gtk_tree_model_get_iter_first( GTK_TREE_MODEL(store), &iter);
+  do {
+    gtk_tree_model_get (GTK_TREE_MODEL(store), &iter,
+			SEQ_COLUMN, &buffer,
+			ZUIN_COLUMN, &zuin,
+			USERFREQ_COLUMN, &userfreq,
+			TIME_COLUMN, &time,
+			MAXFREQ_COLUMN, &maxfreq,
+			ORIGFREQ_COLUMN, &origfreq,
+			-1);
+    sprintf(str, "%s\t", buffer);
+	 sprintf(buf, "%s\t", zuin);
+	 strcat(str,buf);
+    sprintf( buf, "%d\t%d\t%d\t%d", userfreq, time, maxfreq, origfreq );
+    strcat(str, buf);
+    fprintf(file,"%s\n", str);
+    g_free(buffer);
+    g_free(zuin);
+  } while( gtk_tree_model_iter_next( GTK_TREE_MODEL(store), &iter ) );
+  fclose(file);
+}
+
+void file_export(void *ptr)
+{
+  GtkWidget *dialog;
+
+  dialog = gtk_file_chooser_dialog_new ("匯出",
+					main_window,
+					GTK_FILE_CHOOSER_ACTION_SAVE,
+					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+					GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
+					NULL);
+  gtk_file_chooser_set_show_hidden(GTK_FILE_CHOOSER(dialog), TRUE);
+
+  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
+    {
+	   gchar *filename;
+      filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
+      file_export_as_text( filename );
+      g_free (filename);
+    }
+
+  gtk_widget_destroy (dialog);
 }
 
 void

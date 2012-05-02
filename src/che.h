@@ -48,6 +48,7 @@ uint32_t chewing_lifetime = 0;
 void file_open( GtkWindow* );
 void file_save_as( GtkWindow* );
 void file_save( gchar* );
+void file_export(void*);
 void cell_edited(GtkCellRendererText *cellrenderertext, gchar *arg1, gchar *arg2, gpointer column);
 void che_new_phrase_dlg( GtkWidget* );
 void che_save_phrase(GtkWidget *obj, gpointer vbox);
