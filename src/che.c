@@ -1281,7 +1281,7 @@ void che_show_about_dlg(GtkWidget *widget)
 
 	gtk_about_dialog_set_program_name(dialog, "新注音詞庫編輯器");
 	gtk_about_dialog_set_authors(dialog, authors);
-	gtk_about_dialog_set_version(dialog, "2.0");
+	gtk_about_dialog_set_version(dialog, "2.1");
 	gtk_about_dialog_set_comments(dialog, "編輯新酷音(libchewing 1.3.x)的二進位詞庫\n"
 	                                      "使用者詞庫位於~/.chewing/uhash.dat");
 	gtk_about_dialog_set_website(dialog, "http://code.google.com/p/chewing-hash-editor");
