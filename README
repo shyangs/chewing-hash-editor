@@ -1,0 +1,7 @@
+新酷音輸入法詞庫編輯器
+
+相關資訊請見專案首頁: http://code.google.com/p/chewing-hash-editor/
+
+使用方法
+  編輯使用者詞庫: ./che ~/.chewing/uhash.dat
+
