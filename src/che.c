@@ -159,6 +159,7 @@ che_create_menu( GtkWindow *parient )
   GtkWidget *file_menu_saveas;
   GtkWidget *file_menu_quit;
   GtkWidget *file_menu_export;
+  GtkWidget *file_menu_import;
   GtkWidget *edit_menu;
   GtkWidget *edit_menu_newtsi;
   GtkWidget *edit_menu_remove;
@@ -194,6 +195,10 @@ che_create_menu( GtkWindow *parient )
   g_signal_connect_swapped (G_OBJECT (file_menu_export), "activate",
 		       G_CALLBACK (file_export), NULL);
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_export);
+  file_menu_import = gtk_menu_item_new_with_mnemonic ("匯入(_I)");
+  g_signal_connect_swapped (G_OBJECT (file_menu_import), "activate",
+		       G_CALLBACK (file_import), NULL);
+  gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), file_menu_import);
   separate = gtk_separator_menu_item_new();
   gtk_menu_shell_append (GTK_MENU_SHELL (file_menu), separate);
   file_menu_quit = gtk_image_menu_item_new_from_stock (GTK_STOCK_QUIT, NULL);
@@ -435,6 +440,72 @@ che_read_hash(gchar *filename)
 	}
 }
 
+/* import database from text file
+ * The file must contain at least two tab-separated fields.
+ * The first field is the phrase, and the second field is
+ * its zhuin symbol.
+ **/
+void
+che_import_txt(gchar *filename)
+{
+  FILE *file;
+  char line_buffer[1024];
+  file = fopen(filename, "rb");
+
+  setlocale(LC_CTYPE, "zh_TW.UTF-8");
+  while(fgets(line_buffer, 1024, file))
+    {
+	   char *pos;
+		int index;
+	   gchar phrase[32] = {};
+	   gchar zhuin[256] = {};
+	   gint userfreq = 0, phrase_time = 0, maxfreq = 0, origfreq = 0;
+		pos = strtok(line_buffer, "\t");
+		index = 0;
+		while (pos != NULL) {
+			switch (index) {
+				case 0: /* phrase */
+					strcpy(phrase, pos);
+					break;
+				case 1: /* zhuin */
+					strcpy(zhuin, pos);
+					break;
+				case 2: /* userfreq */
+					userfreq = atoi(pos);
+					break;
+				case 3: /* time */
+					phrase_time = atoi(pos);
+					break;
+				case 4: /* maxfreq */
+					maxfreq = atoi(pos);
+					break;
+				case 5: /* origfreq */
+					origfreq = atoi(pos);
+					break;
+				default:
+					break;
+			}
+			pos = strtok(NULL, "\t");
+			++index;
+		}
+      /* read userfreq & recentTime */
+		if (strlen(phrase) > 0 && strlen(zhuin) > 0)
+      {
+		  gtk_tree_store_append (store, &iter, NULL);
+		  gtk_tree_store_set (store, &iter,
+						SEQ_COLUMN, phrase,
+						ZUIN_COLUMN, zhuin,
+						USERFREQ_COLUMN, userfreq,
+						TIME_COLUMN, phrase_time,
+						MAXFREQ_COLUMN, maxfreq,
+						ORIGFREQ_COLUMN, origfreq,
+						-1);
+	   }
+    }
+	
+  fclose(file);
+}
+
 /* callback */
 void
 file_open( GtkWindow *parient )
@@ -671,6 +742,29 @@ void file_export(void *ptr)
 	   gchar *filename;
       filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
       file_export_as_text( filename );
+      g_free (filename);
+    }
+
+  gtk_widget_destroy (dialog);
+}
+
+void file_import(void *ptr)
+{
+  GtkWidget *dialog;
+
+  dialog = gtk_file_chooser_dialog_new ("匯入",
+					main_window,
+					GTK_FILE_CHOOSER_ACTION_SAVE,
+					GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+					GTK_STOCK_SAVE, GTK_RESPONSE_ACCEPT,
+					NULL);
+  gtk_file_chooser_set_show_hidden(GTK_FILE_CHOOSER(dialog), TRUE);
+
+  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
+    {
+	   gchar *filename;
+      filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
+      che_import_txt(filename);
       g_free (filename);
     }
 
