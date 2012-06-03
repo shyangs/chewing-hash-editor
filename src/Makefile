@@ -4,7 +4,7 @@ LIB_GTK=`pkg-config gtk+-2.0 --cflags --libs`
 all: che
 
 che: che.o key2pho-utf8.o chewing-utf8-util.o zhuindict.o
-	gcc $(LIB_GTK) che.o key2pho-utf8.o chewing-utf8-util.o zhuindict.o -o che
+	gcc che.o key2pho-utf8.o chewing-utf8-util.o zhuindict.o -o che $(LIB_GTK)
 
 zhuindict.o: zhuindict.c
 	gcc $(CFLAGS) -c zhuindict.c
